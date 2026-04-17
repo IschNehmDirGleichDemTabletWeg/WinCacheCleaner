@@ -11,6 +11,26 @@ import time
 
 
 # -------------------------------------------------------
+# Logging
+# -------------------------------------------------------
+def get_log_path():
+    if getattr(sys, "frozen", False):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base, "WinCacheCleaner.log")
+
+
+def write_log(msg):
+    from datetime import datetime
+    try:
+        with open(get_log_path(), "a", encoding="utf-8") as f:
+            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
+    except Exception:
+        pass
+
+
+# -------------------------------------------------------
 # UAC self-elevation
 # -------------------------------------------------------
 def is_admin():
@@ -80,6 +100,11 @@ def add_tooltip(widget, text):
 
 def clear_recent_files():
     path = expand(r"%APPDATA%\Microsoft\Windows\Recent")
+    if not os.path.exists(path):
+        msg = "Recent Files: Ordner nicht vorhanden - nichts zu tun"
+        set_status(msg, "lightyellow")
+        write_log(msg)
+        return
     count = 0
     errors = 0
     try:
@@ -92,18 +117,27 @@ def clear_recent_files():
                 elif os.path.isdir(full):
                     shutil.rmtree(full)
                     count += 1
-            except Exception:
+            except Exception as e:
                 errors += 1
+                write_log(f"Recent Files: Fehler bei '{full}' - {e}")
         msg = f"Recent Files: {count} Eintraege geloescht"
         if errors:
             msg += f" ({errors} Fehler)"
         set_status(msg, "lightgreen")
+        write_log(msg)
     except Exception as e:
-        set_status(f"Recent Files: Fehler - {e}", "salmon")
+        msg = f"Recent Files: Fehler - {e}"
+        set_status(msg, "salmon")
+        write_log(msg)
 
 
 def clear_automatic_destinations():
     path = expand(r"%APPDATA%\Microsoft\Windows\Recent\AutomaticDestinations")
+    if not os.path.exists(path):
+        msg = "Jump Lists: Ordner nicht vorhanden - nichts zu tun"
+        set_status(msg, "lightyellow")
+        write_log(msg)
+        return
     count = 0
     errors = 0
     try:
@@ -112,18 +146,27 @@ def clear_automatic_destinations():
             try:
                 os.remove(full)
                 count += 1
-            except Exception:
+            except Exception as e:
                 errors += 1
+                write_log(f"Jump Lists: Fehler bei '{full}' - {e}")
         msg = f"Jump Lists: {count} Eintraege geloescht"
         if errors:
             msg += f" ({errors} Fehler)"
         set_status(msg, "lightgreen")
+        write_log(msg)
     except Exception as e:
-        set_status(f"Jump Lists: Fehler - {e}", "salmon")
+        msg = f"Jump Lists: Fehler - {e}"
+        set_status(msg, "salmon")
+        write_log(msg)
 
 
 def clear_thumbnail_cache():
     path = expand(r"%LOCALAPPDATA%\Microsoft\Windows\Explorer")
+    if not os.path.exists(path):
+        msg = "Thumbnail Cache: Ordner nicht vorhanden - nichts zu tun"
+        set_status(msg, "lightyellow")
+        write_log(msg)
+        return
     pattern = os.path.join(path, "thumbcache*")
     count = 0
     errors = 0
@@ -135,19 +178,28 @@ def clear_thumbnail_cache():
             try:
                 os.remove(f)
                 count += 1
-            except Exception:
+            except Exception as e:
                 errors += 1
+                write_log(f"Thumbnail Cache: Fehler bei '{f}' - {e}")
         subprocess.Popen(["explorer.exe"])
         msg = f"Thumbnail Cache: {count} Dateien geloescht"
         if errors:
             msg += f" ({errors} Fehler)"
         set_status(msg, "lightgreen")
+        write_log(msg)
     except Exception as e:
-        set_status(f"Thumbnail Cache: Fehler - {e}", "salmon")
+        msg = f"Thumbnail Cache: Fehler - {e}"
+        set_status(msg, "salmon")
+        write_log(msg)
 
 
 def clear_icon_cache():
     path = expand(r"%LOCALAPPDATA%\Microsoft\Windows\Explorer")
+    if not os.path.exists(path):
+        msg = "Icon Cache: Ordner nicht vorhanden - nichts zu tun"
+        set_status(msg, "lightyellow")
+        write_log(msg)
+        return
     pattern_1 = os.path.join(path, "iconcache*")
     db_path = expand(r"%LOCALAPPDATA%\IconCache.db")
     count = 0
@@ -160,28 +212,40 @@ def clear_icon_cache():
             try:
                 os.remove(f)
                 count += 1
-            except Exception:
+            except Exception as e:
                 errors += 1
+                write_log(f"Icon Cache: Fehler bei '{f}' - {e}")
         try:
             if os.path.exists(db_path):
                 os.remove(db_path)
                 count += 1
-        except Exception:
+        except Exception as e:
             errors += 1
+            write_log(f"Icon Cache: Fehler bei IconCache.db - {e}")
         subprocess.Popen(["explorer.exe"])
         msg = f"Icon Cache: {count} Dateien geloescht"
         if errors:
             msg += f" ({errors} Fehler)"
         set_status(msg, "lightgreen")
+        write_log(msg)
     except Exception as e:
-        set_status(f"Icon Cache: Fehler - {e}", "salmon")
+        msg = f"Icon Cache: Fehler - {e}"
+        set_status(msg, "salmon")
+        write_log(msg)
 
 
 def clear_prefetch():
     if not is_admin():
-        set_status("Prefetch: Administrator-Rechte benoetigt!", "orange")
+        msg = "Prefetch: Administrator-Rechte benoetigt!"
+        set_status(msg, "orange")
+        write_log(msg)
         return
     path = r"C:\Windows\Prefetch"
+    if not os.path.exists(path):
+        msg = "Prefetch: Ordner nicht vorhanden - nichts zu tun"
+        set_status(msg, "lightyellow")
+        write_log(msg)
+        return
     count = 0
     errors = 0
     try:
@@ -189,35 +253,54 @@ def clear_prefetch():
             try:
                 os.remove(f)
                 count += 1
-            except Exception:
+            except Exception as e:
                 errors += 1
+                write_log(f"Prefetch: Fehler bei '{f}' - {e}")
         msg = f"Prefetch: {count} Dateien geloescht"
         if errors:
             msg += f" ({errors} Fehler)"
         set_status(msg, "lightgreen")
+        write_log(msg)
     except Exception as e:
-        set_status(f"Prefetch: Fehler - {e}", "salmon")
+        msg = f"Prefetch: Fehler - {e}"
+        set_status(msg, "salmon")
+        write_log(msg)
 
 
 def clear_mui_cache():
-    key_path = r"Software\Microsoft\Windows\ShellNoRoam\MUICache"
-    try:
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path,
-                             0, winreg.KEY_ALL_ACCESS)
-        count = 0
-        while True:
-            try:
-                name, _, _ = winreg.EnumValue(key, 0)
-                winreg.DeleteValue(key, name)
-                count += 1
-            except OSError:
-                break
-        winreg.CloseKey(key)
-        set_status(f"MUI Cache: {count} Eintraege geloescht", "lightgreen")
-    except FileNotFoundError:
-        set_status("MUI Cache: Schlussel nicht gefunden (bereits leer?)", "lightyellow")
-    except Exception as e:
-        set_status(f"MUI Cache: Fehler - {e}", "salmon")
+    key_paths = [
+        r"Software\Microsoft\Windows\ShellNoRoam\MUICache",
+        r"Software\Classes\Local Settings\MuiCache",
+    ]
+    total = 0
+    found = 0
+    for key_path in key_paths:
+        try:
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path,
+                                 0, winreg.KEY_ALL_ACCESS)
+            found += 1
+            count = 0
+            while True:
+                try:
+                    name, _, _ = winreg.EnumValue(key, 0)
+                    winreg.DeleteValue(key, name)
+                    count += 1
+                except OSError:
+                    break
+            winreg.CloseKey(key)
+            total += count
+            write_log(f"MUI Cache: '{key_path}' - {count} Eintraege geloescht")
+        except FileNotFoundError:
+            write_log(f"MUI Cache: '{key_path}' - nicht vorhanden, uebersprungen")
+        except Exception as e:
+            write_log(f"MUI Cache: '{key_path}' - Fehler: {e}")
+    if found == 0:
+        msg = "MUI Cache: Keine Schlussel gefunden (bereits leer oder nicht vorhanden)"
+        set_status(msg, "lightyellow")
+    else:
+        msg = f"MUI Cache: {total} Eintraege geloescht ({found} Schlussel)"
+        set_status(msg, "lightgreen")
+    write_log(msg)
 
 
 def clear_shellbags():
@@ -255,10 +338,9 @@ def clear_shellbags():
     for key_path in keys:
         delete_tree(winreg.HKEY_CURRENT_USER, key_path)
 
-    set_status(
-        f"ShellBags: Eintraege bereinigt (Fehler: {errors}) - Abmelden empfohlen",
-        "lightgreen"
-    )
+    msg = f"ShellBags: Eintraege bereinigt (Fehler: {errors}) - Abmelden empfohlen"
+    set_status(msg, "lightgreen")
+    write_log(msg)
 
 
 def clear_runmru():
@@ -275,11 +357,17 @@ def clear_runmru():
             except OSError:
                 break
         winreg.CloseKey(key)
-        set_status(f"RunMRU: {count} Eintraege geloescht", "lightgreen")
+        msg = f"RunMRU: {count} Eintraege geloescht"
+        set_status(msg, "lightgreen")
+        write_log(msg)
     except FileNotFoundError:
-        set_status("RunMRU: Schlussel nicht gefunden (bereits leer?)", "lightyellow")
+        msg = "RunMRU: Schlussel nicht gefunden (bereits leer?)"
+        set_status(msg, "lightyellow")
+        write_log(msg)
     except Exception as e:
-        set_status(f"RunMRU: Fehler - {e}", "salmon")
+        msg = f"RunMRU: Fehler - {e}"
+        set_status(msg, "salmon")
+        write_log(msg)
 
 
 def clear_dns_cache():
@@ -289,19 +377,29 @@ def clear_dns_cache():
             capture_output=True, text=True
         )
         if result.returncode == 0:
-            set_status("DNS Cache: erfolgreich geleert", "lightgreen")
+            msg = "DNS Cache: erfolgreich geleert"
+            set_status(msg, "lightgreen")
+            write_log(msg)
         else:
-            set_status(f"DNS Cache: Fehler - {result.stderr.strip()}", "salmon")
+            msg = f"DNS Cache: Fehler - {result.stderr.strip()}"
+            set_status(msg, "salmon")
+            write_log(msg)
     except Exception as e:
-        set_status(f"DNS Cache: Fehler - {e}", "salmon")
+        msg = f"DNS Cache: Fehler - {e}"
+        set_status(msg, "salmon")
+        write_log(msg)
 
 
 def clear_store_cache():
     try:
         subprocess.Popen(["wsreset.exe"])
-        set_status("Store Cache: wsreset.exe gestartet (laeuft im Hintergrund)", "lightgreen")
+        msg = "Store Cache: wsreset.exe gestartet (laeuft im Hintergrund)"
+        set_status(msg, "lightgreen")
+        write_log(msg)
     except Exception as e:
-        set_status(f"Store Cache: Fehler - {e}", "salmon")
+        msg = f"Store Cache: Fehler - {e}"
+        set_status(msg, "salmon")
+        write_log(msg)
 
 
 # -------------------------------------------------------
